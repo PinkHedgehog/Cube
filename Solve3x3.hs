@@ -36,7 +36,7 @@ nextChar x | x == 18 = 1
            | otherwise = x+1
 
 nextMChar :: Word8 -> Word8
-nextMChar x | x < 9 || x < 27 = x + 1
+nextMChar x | elem x [7, 8, 25, 26] = x + 1
             | x == 9 = 25
             | otherwise = 7
 
@@ -131,6 +131,15 @@ conv 15 = "L2 "
 conv 16 = "B "
 conv 17 = "B' "
 conv 18 = "B2 "
+conv 19 = "E "
+conv 20 = "E' "
+conv 21 = "E2 "
+conv 22 = "S "
+conv 23 = "S' "
+conv 24 = "S2 "
+conv 25 = "M "
+conv 26 = "M' "
+conv 27 = "M2 "
 conv 36 = "z2 "
 conv 35 = "z' "
 conv 34 = "z "
@@ -204,6 +213,18 @@ createBlock cube n bstr = do
         when (B.length bstr < B.length (next bstr)) $ do
             putStrLn . show $ (B.length bstr + 1)
         createBlock cube n (next bstr)
+
+epll :: Cube -> B.ByteString -> IO ()
+epll cube bstr = do
+    unless (hasPair bstr) $ do
+        let cb = mplTurns cube bstr 
+        when (solved cb) $ do
+            D.putStrLn . solShow $ bstr
+            D.putStrLn "solved"
+    when (B.length bstr < 11) $ do
+        when (B.length bstr < B.length (nextM bstr)) $ do
+            putStrLn . show $ (B.length bstr + 1)
+        epll cube(nextM bstr)
 
 permute :: Cube -> Word8 -> B.ByteString -> B.ByteString -> IO ()
 permute cube n prev bstr = do
