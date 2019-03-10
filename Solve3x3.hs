@@ -35,6 +35,11 @@ nextChar :: Word8 -> Word8
 nextChar x | x == 18 = 1
            | otherwise = x+1
 
+nextQChar :: Word8 -> Word8
+nextQChar x | elem x [1, 4, 7, 10, 13, 16] = x + 1
+            | elem x [2, 5, 8, 11, 14] = x + 3
+            | otherwise = 1
+
 nextMChar :: Word8 -> Word8
 nextMChar x | elem x [7, 8, 25, 26] = x + 1
             | x == 9 = 25
@@ -61,6 +66,7 @@ nextM bstring | B.all (== 27) bstring = odds !! (B.length bstring)
                , "\EM\a\EM\a\EM\a\EM\a\EM\a\EM\a\EM\a", "\a\EM\a\EM\a\EM\a\EM\a\EM\a\EM\a\EM\a"
                ]
 
+
 nextOriented :: B.ByteString -> B.ByteString
 nextOriented bstring | B.all (== 18) bstring = odds !! (B.length bstring)
                      | B.head bstring == 18 = nextOrientedChar b `B.cons` (nextOriented $! a)
@@ -82,6 +88,23 @@ next bstring | B.length bstring >= 20 = undefined
              | B.all ( == 18) bstring = odds !! len
              | B.head bstring == 18 = nextChar b `B.cons` (next $! a)
              | otherwise = B.cons (nextChar b) a
+    where
+        (b, a) = fromMaybe $ B.uncons bstring
+        fromMaybe Nothing  = (0, "")
+        fromMaybe (Just x) = x
+        len = B.length bstring
+        odds = [ "\SOH", "\a\SOH", "\SOH\a\SOH", "\a\SOH\a\SOH", "\SOH\a\SOH\a\SOH", "\a\SOH\a\SOH\a\SOH"
+               , "\SOH\a\SOH\a\SOH\a\SOH", "\a\SOH\a\SOH\a\SOH\a\SOH", "\SOH\a\SOH\a\SOH\a\SOH\a\SOH"
+               , "\a\SOH\a\SOH\a\SOH\a\SOH\a\SOH", "\SOH\a\SOH\a\SOH\a\SOH\a\SOH\a\SOH"
+               , "\a\SOH\a\SOH\a\SOH\a\SOH\a\SOH\a\SOH", "\SOH\a\SOH\a\SOH\a\SOH\a\SOH\a\SOH\a\SOH"
+               , "\a\SOH\a\SOH\a\SOH\a\SOH\a\SOH\a\SOH\a\SOH", "\SOH\a\SOH\a\SOH\a\SOH\a\SOH\a\SOH\a\SOH\a\SOH"
+               ]
+
+nextQ :: B.ByteString -> B.ByteString
+nextQ bstring | B.length bstring >= 20 = undefined
+             | B.all ( == 17) bstring = odds !! len
+             | B.head bstring == 17 = nextQChar b `B.cons` (nextQ $! a)
+             | otherwise = B.cons (nextQChar b) a
     where
         (b, a) = fromMaybe $ B.uncons bstring
         fromMaybe Nothing  = (0, "")
@@ -187,7 +210,7 @@ rotToOriented (Cube arr) | arr ! 21 == 3 = case arr ! 23 of
 orient :: Cube -> Word8 -> B.ByteString -> IO ()
 orient cube n bstr = do
     unless (hasPair bstr) $ do
-        let cb = mplTurns cube bstr 
+        let cb = mplTurns cube bstr
         when (oriented cb) $ do
             when (solved cb) $ do
                 D.putStr . solShow $ bstr
@@ -200,24 +223,24 @@ orient cube n bstr = do
             putStrLn . show $ (B.length bstr + 1)
         orient cube n (next bstr)
 
-createBlock :: Cube -> Word8 -> B.ByteString -> IO ()
-createBlock cube n bstr = do
+createBlock :: Cube -> B.ByteString -> IO ()
+createBlock cube bstr = do
     unless (hasPair bstr) $ do
-        let cb = mplTurns cube bstr 
+        let cb = mplTurns cube bstr
         when (hasBlocks cb) $ do
             D.putStr . solShow $ bstr
             when (solved cb) $ do
                 D.putStr "solved"
             D.putStrLn ""
-    when (B.length bstr < 19) $ do
-        when (B.length bstr < B.length (next bstr)) $ do
-            putStrLn . show $ (B.length bstr + 1)
-        createBlock cube n (next bstr)
-
+    --when (B.length bstr < 19) $ do
+    --    when (B.length bstr < B.length (next bstr)) $ do
+    --        putStrLn . show $ (B.length bstr + 1)
+    createBlock cube (nextQ bstr)
+--"42 31 51 20 82 10 61 72 190 171 181 101 130 150 160 140 120 111 200 90 3 4 5 6 7 8"
 epll :: Cube -> B.ByteString -> IO ()
 epll cube bstr = do
     unless (hasPair bstr) $ do
-        let cb = mplTurns cube bstr 
+        let cb = mplTurns cube bstr
         when (solved cb) $ do
             D.putStrLn . solShow $ bstr
             D.putStrLn "solved"
@@ -245,4 +268,3 @@ getCubeN = Cube . listArray (1, 26) . (map read) . words
 getCubeS :: B.ByteString -> Cube
 {-# INLINE getCubeS #-}
 getCubeS = mplTurns initCube . B.pack . (map conv') . words'
-
